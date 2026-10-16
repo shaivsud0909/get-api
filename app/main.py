@@ -1,8 +1,12 @@
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.database.connection import engine as Engine
+from app.database.connection import Base
+from app.database import models
 from core.config import settings
 
 from app.routers.config_api import config_router
+from app.routers.get_api import get_api_router
 
 
 app = FastAPI()
@@ -23,7 +27,10 @@ app.add_middleware(
 def startup_event():
     from core.logs import logger
     logger.info("Starting up the application...")
+    Base.metadata.create_all(bind=Engine)
+
 
 
 
 app.include_router(config_router,tags=["config"],prefix="/config")
+app.include_router(get_api_router,tags=["get_api"],prefix="/get_api")
