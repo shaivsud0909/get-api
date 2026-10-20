@@ -26,6 +26,11 @@ class Settings(BaseSettings):
         return f"postgresql+psycopg2://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
 
 
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    SECRET_KEY: str
+    ALGORITHM: str = "HS256"
+
+
     # Environment configuration
     model_config = SettingsConfigDict(
         env_file=PROJECT_ROOT / ".env",

@@ -1,0 +1,35 @@
+from http.client import HTTPException
+from fastapi import Depends
+from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError
+
+from app.authentication.utils import decode_access_token
+
+
+oauth= OAuth2PasswordBearer(tokenUrl="/login", scheme_name="BearerAuth") # extracts the token from the Authorization header 
+    
+
+#admin authorization dependency
+def admin_required(token: str = Depends(oauth)):
+    try:
+        payload = decode_access_token(token)    
+
+        if payload.get("role") != "admin":
+            raise HTTPException(status_code=403, detail="Admin only access")
+
+        return payload
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+
+#user authorization dependency
+def user_required(token: str = Depends(oauth)):
+    try:
+        payload = decode_access_token(token)
+
+        if payload.get("role") != "user":
+            raise HTTPException(status_code=403, detail="User access only")
+
+        return payload
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")  

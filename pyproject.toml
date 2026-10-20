@@ -5,10 +5,12 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "alembic>=1.20.0",
     "dotenv>=0.9.9",
     "fastapi>=0.143.0",
     "psycopg2-binary>=2.9.13",
     "pydantic-settings>=2.15.0",
+    "python-jose[cryptography]>=3.5.0",
     "sqlalchemy>=2.1.4",
     "uvicorn>=0.54.0",
 ]

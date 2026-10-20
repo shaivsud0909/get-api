@@ -12,4 +12,6 @@ wheels/
 # Hash files and logs
 hash_files/
 logs/
+.env
+
 

@@ -6,7 +6,7 @@ from app.database import models
 from core.config import settings
 
 from app.routers.config_api import config_router
-from app.routers.get_api import get_api_router
+from app.routers.user_api import user_router
 
 
 app = FastAPI()
@@ -31,6 +31,6 @@ def startup_event():
 
 
 
-
 app.include_router(config_router,tags=["config"],prefix="/config")
-app.include_router(get_api_router,tags=["get_api"],prefix="/get_api")
+app.include_router(user_router,tags=["user"],prefix="")
+app.include_router(admin_router,tags=["Admin"],prefix="")
