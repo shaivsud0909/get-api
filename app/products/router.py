@@ -38,6 +38,22 @@ def fetch_products(
         order=order,
     )
 
+def fetch_customisable_products(
+    category: str | None = None,
+    customisable: bool= True ,
+    order_by: Literal["id", "name", "price", "stock"] = "id",
+    order: Literal["asc", "desc"] = "asc",
+    db: Session = Depends(get_db),
+):
+    return get_all_products(
+        db=db,
+        category=category,
+        customisable=customisable,
+        order_by=order_by,
+        order=order,
+    )
+
+
 
 def fetch_product(
     product_id: int,
