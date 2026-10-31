@@ -64,11 +64,9 @@ def setup_logger():
     logger = logging.getLogger()
     logger.setLevel(log_level)
 
-    # avoid duplicate handlers (important for FastAPI reload)
     if logger.hasHandlers():
         logger.handlers.clear()
 
-    # File Handler
     file_handler = logging.FileHandler(log_file, mode="a", encoding="utf-8")
     file_formatter = logging.Formatter(
         "%(asctime)s - %(levelname)s - %(module)s - %(funcName)s - %(message)s"
@@ -76,7 +74,6 @@ def setup_logger():
     file_formatter.converter = ist_time
     file_handler.setFormatter(file_formatter)
 
-    # Console Handler
     console_handler = logging.StreamHandler()
     console_formatter = ColoredFormatter(
         "%(asctime)s - %(levelname)s - %(module)s - %(funcName)s - %(message)s"
@@ -87,20 +84,19 @@ def setup_logger():
     logger.addHandler(file_handler)
     logger.addHandler(console_handler)
 
-    # Silence noisy logs
     for noisy in [
-    "azure",
-    "google",
-    "google.cloud",
-    "google.auth",
-    "googleapiclient",
-    "urllib3",
-    "urllib3.connectionpool",
-    "grpc",
-    "httpx",
-    "httpcore",
-    "_client",
-]:
+        "azure",
+        "google",
+        "google.cloud",
+        "google.auth",
+        "googleapiclient",
+        "urllib3",
+        "urllib3.connectionpool",
+        "grpc",
+        "httpx",
+        "httpcore",
+        "_client",
+    ]:
         logging.getLogger(noisy).setLevel(logging.ERROR)
 
     return logger
@@ -113,15 +109,10 @@ class LogRequest(BaseModel):
     )
 
 
-def get_logs(request: LogRequest):
-    """
-    Fetch log file content for a given date (DD-MM-YYYY).
-    """
-
+async def get_logs(request: LogRequest):
     logger.info("Request received: getLogs | date=%s", request.date)
 
     try:
-        # Validate the date.
         parsed_date = datetime.strptime(request.date, "%d-%m-%Y")
         file_name = f"{parsed_date.strftime('%d-%m-%Y')}.log"
 
@@ -173,45 +164,31 @@ def get_logs(request: LogRequest):
             detail="Internal server error",
         )
 
-#delete logs 
-def delete_all_logs():
 
-    logger.info(
-        "Request received: deleteAllLogs"
-    )
+async def delete_all_logs():
+    logger.info("Request received: deleteAllLogs")
 
     try:
-
         deleted_count = 0
 
         for file in os.listdir(logs_dir):
-
             if file.endswith(".log"):
-
-                os.remove(
-                    os.path.join(logs_dir, file)
-                )
-
+                os.remove(os.path.join(logs_dir, file))
                 deleted_count += 1
 
-        logger.info(
-            f"Deleted {deleted_count} log files"
-        )
+        logger.info(f"Deleted {deleted_count} log files")
 
         return {
             "status": "success",
-            "deleted_files": deleted_count
+            "deleted_files": deleted_count,
         }
 
     except Exception as e:
-
-        logger.exception(
-            "Unexpected error in deleteAllLogs"
-        )
+        logger.exception("Unexpected error in deleteAllLogs")
 
         raise HTTPException(
             status_code=500,
-            detail=str(e)
+            detail=str(e),
         )
 
 

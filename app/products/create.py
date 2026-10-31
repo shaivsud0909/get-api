@@ -1,11 +1,10 @@
-
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.models import Product
 from app.products.schema import ProductCreate
 
 
-def create_products(request: ProductCreate, db: Session):
+async def create_products(request: ProductCreate, db: AsyncSession):
     new_product = Product(
         name=request.name,
         price=request.price,
@@ -17,10 +16,10 @@ def create_products(request: ProductCreate, db: Session):
 
     try:
         db.add(new_product)
-        db.commit()
-        db.refresh(new_product)
+        await db.commit()
+        await db.refresh(new_product)
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise
 
     return new_product

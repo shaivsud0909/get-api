@@ -6,12 +6,11 @@ from app.authentication.utils import decode_access_token
 
 
 oauth = OAuth2PasswordBearer(tokenUrl="/login", scheme_name="BearerAuth")
-    
 
-#admin authorization dependency
-def admin_required(token: str = Depends(oauth)):
+
+async def admin_required(token: str = Depends(oauth)):
     try:
-        payload = decode_access_token(token)    
+        payload = decode_access_token(token)
 
         if not payload:
             raise HTTPException(status_code=401, detail="Invalid or expired token")
@@ -24,8 +23,7 @@ def admin_required(token: str = Depends(oauth)):
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
 
-#user authorization dependency
-def user_required(token: str = Depends(oauth)):
+async def user_required(token: str = Depends(oauth)):
     try:
         payload = decode_access_token(token)
 
@@ -37,4 +35,4 @@ def user_required(token: str = Depends(oauth)):
 
         return payload
     except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")  
+        raise HTTPException(status_code=401, detail="Invalid or expired token")

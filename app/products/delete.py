@@ -1,16 +1,13 @@
-
 from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.models import Product
 
 
-def delete_product(product_id: int, db: Session) -> None:
-    product = (
-        db.query(Product)
-        .filter(Product.id == product_id)
-        .first()
-    )
+async def delete_product(product_id: int, db: AsyncSession) -> None:
+    result = await db.execute(select(Product).where(Product.id == product_id))
+    product = result.scalar_one_or_none()
 
     if product is None:
         raise HTTPException(
@@ -19,8 +16,8 @@ def delete_product(product_id: int, db: Session) -> None:
         )
 
     try:
-        db.delete(product)
-        db.commit()
+        await db.delete(product)
+        await db.commit()
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise

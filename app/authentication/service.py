@@ -1,22 +1,19 @@
 from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.models import User
 from app.authentication.utils import hash_password, create_access_token, verify_password
 from app.authentication.schema import UserLogin, UserSignup
-from sqlalchemy.orm import Session
 
 
-
-
-def signup_user(data: UserSignup, db: Session):
-
-    existing_user = (
-        db.query(User)
-        .filter(User.email == str(data.email).lower())
-        .first()
+async def signup_user(data: UserSignup, db: AsyncSession):
+    result = await db.execute(
+        select(User).where(User.email == str(data.email).lower())
     )
+    existing_user = result.scalar_one_or_none()
 
     if existing_user:
         raise HTTPException(
@@ -29,60 +26,44 @@ def signup_user(data: UserSignup, db: Session):
         password_hash=hash_password(data.password),
         phone_number=data.phone_number,
         country_code=data.country_code,
-        # role, status flags and timestamps use model/database defaults
     )
     try:
         db.add(user)
-        db.commit()
-        db.refresh(user)
+        await db.commit()
+        await db.refresh(user)
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise
 
     return user
 
 
-
-
-
-
-
-def login(request: UserLogin, db: Session):
-    
-    #  Find the user by email
-    user = (
-        db.query(User)
-        .filter(User.email == str(request.email).lower())
-        .first()
+async def login(request: UserLogin, db: AsyncSession):
+    result = await db.execute(
+        select(User).where(User.email == str(request.email).lower())
     )
+    user = result.scalar_one_or_none()
 
-    #  Check credentials
-    if not user or not verify_password(
-        request.password,
-        user.password_hash,
-    ):
+    if not user or not verify_password(request.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
         )
 
-    # 3. Check account status
     if not user.is_active or user.is_deleted:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Account is inactive",
         )
 
-    # 4. Update last successful login time
     user.last_login_at = datetime.now(timezone.utc)
 
     try:
-        db.commit()
+        await db.commit()
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise
 
-    # 5. Generate JWT
     token = create_access_token({
         "sub": str(user.id),
         "email": user.email,
@@ -93,4 +74,3 @@ def login(request: UserLogin, db: Session):
         "access_token": token,
         "token_type": "bearer",
     }
-

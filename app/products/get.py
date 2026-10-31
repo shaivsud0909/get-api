@@ -1,35 +1,32 @@
-
 from typing import Literal
 
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.models import Product
 
 
-def get_all_products(
-    db: Session,
+async def get_all_products(
+    db: AsyncSession,
     category: str | None = None,
     order_by: Literal["id", "name", "price", "stock"] = "id",
     customisable: bool | None = None,
     order: Literal["asc", "desc"] = "asc",
 ):
-    query = db.query(Product)
+    stmt = select(Product)
 
     if customisable is not None:
-        query = query.filter(
-            Product.customisable == customisable
-        )
+        stmt = stmt.where(Product.customisable == customisable)
 
     if category:
-        query = query.filter(
-            Product.category.ilike(category)
-        )
+        stmt = stmt.where(Product.category.ilike(category))
 
     column = getattr(Product, order_by)
 
     if order == "desc":
-        query = query.order_by(column.desc())
+        stmt = stmt.order_by(column.desc())
     else:
-        query = query.order_by(column.asc())
+        stmt = stmt.order_by(column.asc())
 
-    return query.all()
+    result = await db.execute(stmt)
+    return result.scalars().all()

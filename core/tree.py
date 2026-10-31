@@ -7,18 +7,12 @@ from core.logs import logger
 from core.config import PROJECT_ROOT as BASE_DIR
 
 
-def folder_tree(folder_name: str) -> dict:
-    """
-    Fetch the tree structure of a folder and its subfolders and files.
-    """
-
+async def folder_tree(folder_name: str) -> dict:
     logger.info("Request received: folder-tree")
 
     try:
-  
         folder_path = (BASE_DIR / folder_name).resolve()
 
-        # Validate that the path stays inside BASE_DIR
         if not folder_path.is_relative_to(BASE_DIR.resolve()):
             raise HTTPException(
                 status_code=400,

@@ -1,21 +1,18 @@
-
 from fastapi import HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.models import Product
 from app.products.schema import ProductUpdate
 
 
-def update_fields(
+async def update_fields(
     product_id: int,
     data: ProductUpdate,
-    db: Session,
+    db: AsyncSession,
 ):
-    product = (
-        db.query(Product)
-        .filter(Product.id == product_id)
-        .first()
-    )
+    result = await db.execute(select(Product).where(Product.id == product_id))
+    product = result.scalar_one_or_none()
 
     if product is None:
         raise HTTPException(
@@ -23,7 +20,6 @@ def update_fields(
             detail="Product not found",
         )
 
-    # Only include fields provided by the admin
     update_data = data.model_dump(exclude_unset=True)
 
     if not update_data:
@@ -36,11 +32,11 @@ def update_fields(
         for field, value in update_data.items():
             setattr(product, field, value)
 
-        db.commit()
-        db.refresh(product)
+        await db.commit()
+        await db.refresh(product)
 
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise
 
     return product
