@@ -10,8 +10,8 @@ from app.products.router import (
 
 admin_router = APIRouter()
 
-admin_router.post("/products")(add_product)
-admin_router.get("/products")(fetch_products)
+admin_router.post("/add-products")(add_product)
+admin_router.get("/fetch-products")(fetch_products)
 admin_router.get("/products/{product_id}")(fetch_product)
 admin_router.put("/products/{product_id}")(edit_product)
 admin_router.delete("/products/{product_id}")(remove_product)

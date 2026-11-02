@@ -17,4 +17,7 @@ dependencies = [
     "sqlalchemy>=2.1.4",
     "uvicorn>=0.54.0",
     "greenlet>=3.5.6",
+    "pytest>=9.2.0",
+    "pytest-asyncio>=1.4.1.post1",
+    "httpx>=0.28.1",
 ]
