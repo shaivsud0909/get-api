@@ -8,11 +8,11 @@ from app.authentication.service import login, signup_user
 authentication_router = APIRouter()
 
 
-def signup(
+async def signup(
     data: UserSignup,
     db: Session = Depends(get_db),
 ):
-    user = signup_user(data, db)
+    user = await signup_user(data, db)
 
     return {
         "id": user.id,
@@ -28,11 +28,11 @@ def signup(
     }
 
 
-def login_endpoint(
+async def login_endpoint(
     request: UserLogin,
     db: Session = Depends(get_db),
 ):
-    return login(request, db)
+    return await login(request, db)
 
 
 authentication_router.post("/signup")(signup)
