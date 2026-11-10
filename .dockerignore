@@ -1,0 +1,11 @@
+.env
+.venv
+.git
+.gitignore
+.pytest_cache
+**/__pycache__
+*.pyc
+LOGS
+hash_files
+Dockerfile
+.dockerignore

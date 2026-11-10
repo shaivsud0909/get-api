@@ -17,7 +17,6 @@ async def add_to_cart(user_client, product_id, quantity):
     return await user_client.post(
         "/add-to-cart",
         json={"product_id": product_id, "quantity": quantity},
-        params={"user_id": user_client.user_id},
     )
 
 
@@ -28,9 +27,9 @@ async def add_to_cart(user_client, product_id, quantity):
     [
         ("get", "/products", {}),
         ("get", "/customisable-products", {}),
-        ("get", "/cart", {"params": {"user_id": 1}}),
-        ("post", "/add-to-cart", {"json": {"product_id": 1, "quantity": 1}, "params": {"user_id": 1}}),
-        ("patch", "/cart-item/1", {"json": {"quantity": 1}, "params": {"user_id": 1}}),
+        ("get", "/cart", {}),
+        ("post", "/add-to-cart", {"json": {"product_id": 1, "quantity": 1}}),
+        ("patch", "/cart-item/1", {"json": {"quantity": 1}}),
     ],
 )
 async def test_user_routes_require_token(client, method, url, kwargs):
@@ -43,9 +42,9 @@ async def test_user_routes_require_token(client, method, url, kwargs):
     [
         ("get", "/products", {}),
         ("get", "/customisable-products", {}),
-        ("get", "/cart", {"params": {"user_id": 1}}),
-        ("post", "/add-to-cart", {"json": {"product_id": 1, "quantity": 1}, "params": {"user_id": 1}}),
-        ("patch", "/cart-item/1", {"json": {"quantity": 1}, "params": {"user_id": 1}}),
+        ("get", "/cart", {}),
+        ("post", "/add-to-cart", {"json": {"product_id": 1, "quantity": 1}}),
+        ("patch", "/cart-item/1", {"json": {"quantity": 1}}),
     ],
 )
 async def test_user_routes_reject_admin(admin_client, method, url, kwargs):
@@ -108,14 +107,15 @@ async def test_fetch_customisable_products_filter_by_category(user_client):
 # ── GET /cart ─────────────────────────────────────────────────────────────────
 
 async def test_create_cart_success(user_client):
-    response = await user_client.get("/cart", params={"user_id": user_client.user_id})
+    response = await user_client.get("/cart")
     assert response.status_code == 200
     assert response.json()["data"]["user_id"] == user_client.user_id
 
 
-async def test_create_cart_missing_user_id(user_client):
-    response = await user_client.get("/cart")
-    assert response.status_code == 422
+async def test_create_cart_ignores_user_id_param(user_client):
+    response = await user_client.get("/cart", params={"user_id": user_client.user_id + 1000})
+    assert response.status_code == 200
+    assert response.json()["data"]["user_id"] == user_client.user_id
 
 
 # ── POST /add-to-cart ─────────────────────────────────────────────────────────
@@ -153,21 +153,28 @@ async def test_add_to_cart_increment_exceeds_stock(user_client, product):
 
 async def test_add_to_cart_missing_quantity(user_client, product):
     response = await user_client.post(
-        "/add-to-cart", json={"product_id": product["id"]}, params={"user_id": user_client.user_id}
+        "/add-to-cart", json={"product_id": product["id"]}
     )
     assert response.status_code == 422
 
 
 async def test_add_to_cart_missing_product_id(user_client):
     response = await user_client.post(
-        "/add-to-cart", json={"quantity": 1}, params={"user_id": user_client.user_id}
+        "/add-to-cart", json={"quantity": 1}
     )
     assert response.status_code == 422
 
 
-async def test_add_to_cart_missing_user_id(user_client, product):
-    response = await user_client.post("/add-to-cart", json={"product_id": product["id"], "quantity": 1})
-    assert response.status_code == 422
+async def test_add_to_cart_ignores_user_id_param(user_client, product):
+    response = await user_client.post(
+        "/add-to-cart",
+        json={"product_id": product["id"], "quantity": 1},
+        params={"user_id": user_client.user_id + 1000},
+    )
+    assert response.status_code == 200
+    # editing only succeeds for items in the caller's own cart
+    item_id = response.json()["data"]["id"]
+    assert (await user_client.patch(f"/cart-item/{item_id}", json={"quantity": 2})).status_code == 200
 
 
 # ── PATCH /cart-item/{item_id} ───────────────────────────────────────────────
@@ -175,7 +182,7 @@ async def test_add_to_cart_missing_user_id(user_client, product):
 async def test_edit_cart_item_success(user_client, product):
     item_id = (await add_to_cart(user_client, product["id"], 1)).json()["data"]["id"]
     response = await user_client.patch(
-        f"/cart-item/{item_id}", json={"quantity": 4}, params={"user_id": user_client.user_id}
+        f"/cart-item/{item_id}", json={"quantity": 4}
     )
     assert response.status_code == 200
     assert response.json()["data"]["quantity"] == 4
@@ -183,7 +190,7 @@ async def test_edit_cart_item_success(user_client, product):
 
 async def test_edit_cart_item_not_found(user_client):
     response = await user_client.patch(
-        "/cart-item/999999", json={"quantity": 1}, params={"user_id": user_client.user_id}
+        "/cart-item/999999", json={"quantity": 1}
     )
     assert response.status_code == 404
 
@@ -193,7 +200,6 @@ async def test_edit_cart_item_insufficient_stock(user_client, product):
     response = await user_client.patch(
         f"/cart-item/{item_id}",
         json={"quantity": product["stock"] + 1},
-        params={"user_id": user_client.user_id},
     )
     assert response.status_code == 400
 
@@ -201,7 +207,7 @@ async def test_edit_cart_item_insufficient_stock(user_client, product):
 async def test_edit_cart_item_invalid_quantity_zero(user_client, product):
     item_id = (await add_to_cart(user_client, product["id"], 1)).json()["data"]["id"]
     response = await user_client.patch(
-        f"/cart-item/{item_id}", json={"quantity": 0}, params={"user_id": user_client.user_id}
+        f"/cart-item/{item_id}", json={"quantity": 0}
     )
     assert response.status_code == 422
 
@@ -210,13 +216,12 @@ async def test_edit_cart_item_belongs_to_another_user(user_client, product, clie
     item_id = (await add_to_cart(user_client, product["id"], 1)).json()["data"]["id"]
 
     other = {"email": f"other-{uuid.uuid4().hex[:10]}@example.com", "password": "OtherPass123!"}
-    other_id = (await client.post("/signup", json=other)).json()["id"]
+    await client.post("/signup", json=other)
     other_token = (await client.post("/login", json=other)).json()["access_token"]
 
     response = await client.patch(
         f"/cart-item/{item_id}",
         json={"quantity": 2},
-        params={"user_id": other_id},
         headers={"Authorization": f"Bearer {other_token}"},
     )
     assert response.status_code == 404
