@@ -14,6 +14,7 @@ like the user signup fields.
 from __future__ import annotations
 
 import argparse
+import asyncio
 import getpass
 import secrets
 import sys
@@ -26,8 +27,9 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from pydantic import Field, ValidationError
 from passlib.exc import MissingBackendError
+from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.authentication.schema import UserSignup
 
@@ -40,8 +42,8 @@ class AdminSignup(UserSignup):
     password: str = Field(min_length=1, max_length=128)
 
 
-def create_admin(
-    db: Session,
+async def create_admin(
+    db: AsyncSession,
     email: str,
     password: str,
     *,
@@ -62,9 +64,9 @@ def create_admin(
         from app.authentication.utils import hash_password
         from app.database.models import User
 
-        existing_user = db.query(User).filter(User.email == normalized_email).first()
-        if existing_user is not None:
-            db.rollback()
+        result = await db.execute(select(User).where(User.email == normalized_email))
+        if result.scalars().first() is not None:
+            await db.rollback()
             return False
 
         admin = User(
@@ -80,18 +82,18 @@ def create_admin(
         db.add(admin)
 
         if dry_run:
-            db.flush()
-            db.rollback()
+            await db.flush()
+            await db.rollback()
             return True
 
-        db.commit()
+        await db.commit()
         return True
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise
 
 
-def main() -> int:
+async def main() -> int:
     parser = argparse.ArgumentParser(description="Create an admin account.")
     parser.add_argument("--phone-number", help="Optional phone number.")
     parser.add_argument("--country-code", help="Optional country calling code.")
@@ -126,14 +128,14 @@ def main() -> int:
             print(f"Invalid {location}: {error['msg']}.", file=sys.stderr)
         return 2
 
-    db: Session | None = None
+    db: AsyncSession | None = None
     try:
         # Importing this reads the application's settings and creates its
         # existing engine/session factory. Keep configuration errors reportable.
-        from app.database.connection import SessionLocal
+        from app.database.connection import AsyncSessionLocal
 
-        db = SessionLocal()
-        created = create_admin(
+        db = AsyncSessionLocal()
+        created = await create_admin(
             db,
             email,
             password,
@@ -150,7 +152,7 @@ def main() -> int:
         else:
             print(f"Admin account created for {email}.")
         return 0
-    except ValidationError as exc:
+    except ValidationError:
         print(
             "Configuration or account data is invalid; check the project settings and input.",
             file=sys.stderr,
@@ -158,7 +160,7 @@ def main() -> int:
         return 2
     except MissingBackendError:
         if db is not None:
-            db.rollback()
+            await db.rollback()
         print(
             "Password hashing backend is missing. Run `uv sync` to install the declared bcrypt dependency, then retry.",
             file=sys.stderr,
@@ -166,18 +168,21 @@ def main() -> int:
         return 1
     except SQLAlchemyError:
         if db is not None:
-            db.rollback()
+            await db.rollback()
         print("Database operation failed; no admin account was created.", file=sys.stderr)
         return 1
-    except Exception:
+    except Exception as exc:
         if db is not None:
-            db.rollback()
-        print("Admin creation failed; no password details were recorded.", file=sys.stderr)
+            await db.rollback()
+        print(
+            f"Admin creation failed: {type(exc).__name__}: {exc}",
+            file=sys.stderr,
+        )
         return 1
     finally:
         if db is not None:
-            db.close()
+            await db.close()
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(asyncio.run(main()))

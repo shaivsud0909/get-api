@@ -9,6 +9,7 @@ from app.authentication.role import admin_required, user_required
 from app.routers.admin_api import admin_router
 from app.routers.config_api import config_router
 from app.routers.user_api import user_router
+from app.routers.payment_api import payment_router
 
 app = FastAPI(
     title=settings.title,
@@ -38,4 +39,5 @@ async def startup_event():
 app.include_router(authentication_router, tags=["authentication"], prefix="")
 app.include_router(user_router, tags=["user"], prefix="", dependencies=[Depends(user_required)])
 app.include_router(admin_router, tags=["admin"], prefix="",dependencies=[Depends(admin_required)])
+app.include_router(payment_router, tags=["payments"], prefix="")
 app.include_router(config_router, tags=["config"], prefix="/config")

@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError
 
@@ -23,7 +23,7 @@ async def admin_required(token: str = Depends(oauth)):
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
 
-async def user_required(token: str = Depends(oauth)):
+async def user_required(request: Request, token: str = Depends(oauth)):
     try:
         payload = decode_access_token(token)
 
@@ -33,6 +33,7 @@ async def user_required(token: str = Depends(oauth)):
         if payload.get("role") != "user":
             raise HTTPException(status_code=403, detail="User access only")
 
+        request.state.user = payload
         return payload
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid or expired token")

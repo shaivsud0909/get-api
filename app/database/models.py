@@ -10,6 +10,8 @@ from sqlalchemy import (
     func,
     UniqueConstraint,
     CheckConstraint,
+    Index,
+    JSON,
 )
 from sqlalchemy.orm import relationship
 
@@ -33,6 +35,31 @@ class User(Base):
     last_login_at = Column(TIMESTAMP(timezone=True), nullable=True)
 
     cart = relationship("Cart",back_populates="user",uselist=False,cascade="all, delete-orphan")
+    addresses = relationship("Address", back_populates="user", cascade="all, delete-orphan")
+
+
+class Address(Base):
+    __tablename__ = "addresses"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    full_name = Column(String(100), nullable=False)
+    phone = Column(String(20), nullable=False)
+    line1 = Column(String(200), nullable=False)
+    line2 = Column(String(200), nullable=True)
+    city = Column(String(100), nullable=False)
+    state = Column(String(100), nullable=False)
+    postal_code = Column(String(20), nullable=False)
+    country = Column(String(100), nullable=False)
+    is_default = Column(Boolean, nullable=False, default=False, server_default=text("false"))
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+    user = relationship("User", back_populates="addresses")
+
+    __table_args__ = (
+        Index("uq_user_default_address", "user_id", unique=True, postgresql_where=text("is_default")),
+    )
 
 
 class Product(Base):
@@ -79,3 +106,53 @@ class CartItem(Base):
         UniqueConstraint("cart_id", "product_id", name="uq_cart_product"),
         CheckConstraint("quantity > 0", name="ck_cart_item_quantity"),
     )
+
+
+class Order(Base):
+    __tablename__ = "orders"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    total_amount = Column(Float, nullable=False)
+    currency = Column(String(3), nullable=False, default="INR", server_default="INR")
+    status = Column(String(20), nullable=False, default="pending_payment")
+    shipping_address = Column(JSON, nullable=False)
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+    items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
+    payments = relationship("Payment", back_populates="order", cascade="all, delete-orphan")
+
+
+class OrderItem(Base):
+    __tablename__ = "order_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, ForeignKey("orders.id", ondelete="CASCADE"), nullable=False, index=True)
+    product_id = Column(Integer, ForeignKey("products.id", ondelete="SET NULL"), nullable=True, index=True)
+    product_name = Column(String(100), nullable=False)
+    price = Column(Float, nullable=False)
+    quantity = Column(Integer, nullable=False)
+
+    order = relationship("Order", back_populates="items")
+
+    __table_args__ = (CheckConstraint("quantity > 0", name="ck_order_item_quantity"),)
+
+
+
+class Payment(Base):
+    __tablename__ = "payments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, ForeignKey("orders.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    gateway = Column(String(20), nullable=False, default="razorpay")
+    gateway_order_id = Column(String(100), nullable=False, unique=True)
+    gateway_payment_id = Column(String(100), nullable=True)
+    amount = Column(Integer, nullable=False)  # smallest currency unit (paise)
+    currency = Column(String(3), nullable=False, default="INR")
+    status = Column(String(20), nullable=False, default="created")
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+    order = relationship("Order", back_populates="payments")
