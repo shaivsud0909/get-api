@@ -27,13 +27,13 @@ app.add_middleware(
 )
 
 
-@app.on_event("startup")
-async def startup_event():
-    from core.logs import logger
+# @app.on_event("startup")
+# async def startup_event():
+#     from core.logs import logger
 
-    logger.info("Starting up the application...")
-    async with Engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+#     logger.info("Starting up the application...")
+#     async with Engine.begin() as conn:
+#         await conn.run_sync(Base.metadata.create_all)
 
 
 app.include_router(authentication_router, tags=["authentication"], prefix="")
