@@ -9,8 +9,9 @@ from app.utils.api_response import api_response
 
 
 @api_response(success_message="Payment initiated successfully", error_message="Failed to initiate payment")
-async def initiate_payment(request: InitiatePayment, current_user: dict = Depends(user_required), db: AsyncSession = Depends(get_db)):
+async def initiate_payment(request: InitiatePayment, req: Request, _: dict = Depends(user_required), db: AsyncSession = Depends(get_db)):
     try:
+        current_user = req.state.user
         user_id = int(current_user["sub"])
         return await initiate_payment_service(request.order_id, user_id, db)
     except HTTPException:

@@ -36,6 +36,7 @@ class User(Base):
 
     cart = relationship("Cart",back_populates="user",uselist=False,cascade="all, delete-orphan")
     addresses = relationship("Address", back_populates="user", cascade="all, delete-orphan")
+    reviews = relationship("Reviews", back_populates="user", cascade="all, delete-orphan")
 
 
 class Address(Base):
@@ -74,6 +75,43 @@ class Product(Base):
     description = Column(String(300), nullable=True)
 
     cart_items = relationship("CartItem", back_populates="product", cascade="all, delete-orphan")
+    reviews = relationship("Reviews", back_populates="product", cascade="all, delete-orphan")
+    product_details = relationship("ProductDetails", back_populates="product", cascade="all, delete-orphan")
+    images = relationship("ProductImage", back_populates="product", cascade="all, delete-orphan")
+
+
+class ProductDetails(Base):
+    __tablename__ = "product_details"
+
+    id = Column(Integer, primary_key=True, index=True)
+    product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=False, index=True)
+    key = Column(String(100), nullable=False)
+    value = Column(String(300), nullable=False)
+    detailed_description = Column(String(1000), nullable=True)
+
+    product = relationship("Product", back_populates="product_details")
+
+    __table_args__ = (
+        UniqueConstraint("product_id", "key", name="uq_product_detail_key"),
+    )
+
+
+class ProductImage(Base):
+    __tablename__ = "product_images"
+
+    id = Column(Integer, primary_key=True, index=True)
+    product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=False, index=True)
+    image_url = Column(String(500), nullable=False)
+    alt_text = Column(String(200), nullable=True)
+    is_primary = Column(Boolean, nullable=False, default=False)
+    sort_order = Column(Integer, nullable=False, default=0)
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
+
+    product = relationship("Product", back_populates="images")
+
+    __table_args__ = (
+        Index("uq_product_primary_image", "product_id", unique=True, postgresql_where=text("is_primary")),
+    )
 
 
 class Cart(Base):
@@ -156,3 +194,22 @@ class Payment(Base):
     updated_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 
     order = relationship("Order", back_populates="payments")
+
+class Reviews(Base):
+    __tablename__ = "reviews"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=False, index=True)
+    rating = Column(Integer, nullable=False)
+    comment = Column(String(500), nullable=True)
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+    user = relationship("User",back_populates="reviews")
+    product = relationship("Product",back_populates="reviews")
+
+    __table_args__ = (
+            CheckConstraint("rating >= 1 AND rating <= 5", name="ck_review_rating"),
+            UniqueConstraint("user_id", "product_id", name="uq_user_product_review"),
+        )

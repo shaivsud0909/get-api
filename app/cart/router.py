@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.authentication.role import user_required
@@ -11,8 +11,9 @@ from app.utils.api_response import api_response
 
 
 @api_response(success_message="Cart created successfully", error_message="Failed to create cart")
-async def create_cart(current_user: dict = Depends(user_required), db: AsyncSession = Depends(get_db)):
+async def create_cart(req: Request, _: dict = Depends(user_required), db: AsyncSession = Depends(get_db)):
     try:
+        current_user = req.state.user
         user_id = int(current_user["sub"])
         return await create_cart_service(user_id,db)
     except HTTPException:
@@ -21,8 +22,9 @@ async def create_cart(current_user: dict = Depends(user_required), db: AsyncSess
         raise
 
 @api_response(success_message="Added to cart successfully",error_message="Failed to add in cart")
-async def add_to_cart(request:AddToCart,current_user: dict = Depends(user_required),db: AsyncSession = Depends(get_db)):
+async def add_to_cart(request: AddToCart, req: Request, _: dict = Depends(user_required), db: AsyncSession = Depends(get_db)):
     try:
+        current_user = req.state.user
         user_id = int(current_user["sub"])
         return await add_to_cart_service(request.product_id,request.quantity,user_id,db)
     except HTTPException:
@@ -31,8 +33,9 @@ async def add_to_cart(request:AddToCart,current_user: dict = Depends(user_requir
             raise
 
 @api_response(success_message="Cart item updated successfully", error_message="Failed to update cart item")
-async def edit_cart_item(item_id: int, request: UpdateCartItem, current_user: dict = Depends(user_required), db: AsyncSession = Depends(get_db)):
+async def edit_cart_item(item_id: int, request: UpdateCartItem, req: Request, _: dict = Depends(user_required), db: AsyncSession = Depends(get_db)):
     try:
+        current_user = req.state.user
         user_id = int(current_user["sub"])
         return await update_cart_item_service(item_id, request.quantity, user_id, db)
     except HTTPException:

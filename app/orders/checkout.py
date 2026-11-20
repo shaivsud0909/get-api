@@ -10,25 +10,29 @@ from app.database.models import Cart, CartItem, Order, OrderItem, Product
 from core.config import settings
 
 
-# def serialize_order(order: Order) -> dict:
-#     """Items must be eager loaded; lazy loading is unavailable on async sessions."""
-#     return {
-#         "id": order.id,
-#         "total_amount": order.total_amount,
-#         "currency": order.currency,
-#         "status": order.status,
-#         "shipping_address": order.shipping_address,
-#         "created_at": order.created_at,
-#         "items": [
-#             {
-#                 "product_id": i.product_id,
-#                 "product_name": i.product_name,
-#                 "price": i.price,
-#                 "quantity": i.quantity,
-#             }
-#             for i in order.items
-#         ],
-#     }
+def serialize_order(order: Order) -> dict:
+    """Items must be eager loaded; lazy loading is unavailable on async sessions.
+
+    Returning the ORM object as-is recurses forever: OrderItem.order points back
+    at this same Order, and FastAPI's jsonable_encoder walks relationships.
+    """
+    return {
+        "id": order.id,
+        "total_amount": order.total_amount,
+        "currency": order.currency,
+        "status": order.status,
+        "shipping_address": order.shipping_address,
+        "created_at": order.created_at,
+        "items": [
+            {
+                "product_id": i.product_id,
+                "product_name": i.product_name,
+                "price": i.price,
+                "quantity": i.quantity,
+            }
+            for i in order.items
+        ],
+    }
 
 
 async def checkout_service(address_id: int, user_id: int, db: AsyncSession):
@@ -88,7 +92,7 @@ async def checkout_service(address_id: int, user_id: int, db: AsyncSession):
         await db.rollback()
         raise
 
-    return order
+    return serialize_order(order)
 
 
 async def get_orders_service(user_id: int, db: AsyncSession):
@@ -98,7 +102,7 @@ async def get_orders_service(user_id: int, db: AsyncSession):
         .where(Order.user_id == user_id)
         .order_by(Order.created_at.desc())
     )
-    return result.scalars().all()
+    return [serialize_order(order) for order in result.scalars().all()]
 
 
 async def get_order_service(order_id: int, user_id: int, db: AsyncSession):
@@ -112,4 +116,4 @@ async def get_order_service(order_id: int, user_id: int, db: AsyncSession):
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
 
-    return order
+    return serialize_order(order)

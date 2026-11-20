@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.addresses.schema import AddressCreate, AddressUpdate
@@ -15,8 +15,9 @@ from app.utils.api_response import api_response
 
 
 @api_response(success_message="Address added successfully", error_message="Failed to add address")
-async def add_address(request: AddressCreate, current_user: dict = Depends(user_required), db: AsyncSession = Depends(get_db)):
+async def add_address(request: AddressCreate, req: Request, _: dict = Depends(user_required), db: AsyncSession = Depends(get_db)):
     try:
+        current_user = req.state.user
         user_id = int(current_user["sub"])
         return await create_address_service(request.model_dump(), user_id, db)
     except HTTPException:
@@ -26,8 +27,9 @@ async def add_address(request: AddressCreate, current_user: dict = Depends(user_
 
 
 @api_response(success_message="Addresses fetched successfully", error_message="Failed to fetch addresses")
-async def fetch_addresses(current_user: dict = Depends(user_required), db: AsyncSession = Depends(get_db)):
+async def fetch_addresses(req: Request, _: dict = Depends(user_required), db: AsyncSession = Depends(get_db)):
     try:
+        current_user = req.state.user
         user_id = int(current_user["sub"])
         return await get_addresses_service(user_id, db)
     except HTTPException:
@@ -37,8 +39,9 @@ async def fetch_addresses(current_user: dict = Depends(user_required), db: Async
 
 
 @api_response(success_message="Address updated successfully", error_message="Failed to update address")
-async def edit_address(address_id: int, request: AddressUpdate, current_user: dict = Depends(user_required), db: AsyncSession = Depends(get_db)):
+async def edit_address(address_id: int, request: AddressUpdate, req: Request, _: dict = Depends(user_required), db: AsyncSession = Depends(get_db)):
     try:
+        current_user = req.state.user
         user_id = int(current_user["sub"])
         return await update_address_service(address_id, request.model_dump(exclude_unset=True), user_id, db)
     except HTTPException:
@@ -48,8 +51,9 @@ async def edit_address(address_id: int, request: AddressUpdate, current_user: di
 
 
 @api_response(success_message="Address selected successfully", error_message="Failed to select address")
-async def select_address(address_id: int, current_user: dict = Depends(user_required), db: AsyncSession = Depends(get_db)):
+async def select_address(address_id: int, req: Request, _: dict = Depends(user_required), db: AsyncSession = Depends(get_db)):
     try:
+        current_user = req.state.user
         user_id = int(current_user["sub"])
         return await select_address_service(address_id, user_id, db)
     except HTTPException:
@@ -59,8 +63,9 @@ async def select_address(address_id: int, current_user: dict = Depends(user_requ
 
 
 @api_response(success_message="Address deleted successfully", error_message="Failed to delete address")
-async def remove_address(address_id: int, current_user: dict = Depends(user_required), db: AsyncSession = Depends(get_db)):
+async def remove_address(address_id: int, req: Request, _: dict = Depends(user_required), db: AsyncSession = Depends(get_db)):
     try:
+        current_user = req.state.user
         user_id = int(current_user["sub"])
         return await delete_address_service(address_id, user_id, db)
     except HTTPException:

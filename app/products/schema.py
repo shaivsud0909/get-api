@@ -29,3 +29,15 @@ class ProductUpdate(BaseModel):
     category: str | None = Field(default=None, max_length=50)
     customisable: bool | None = None
     description: str | None = Field(default=None, max_length=300)
+
+class ProductFeatures(BaseModel):
+    key: str = Field(..., min_length=1, max_length=100)
+    value: str = Field(..., min_length=1, max_length=300)
+    detailed_description: str | None = Field(default=None, max_length=1000)
+
+class ProductImage(BaseModel):
+    alt_text: str | None = Field(default=None, max_length=200)
+    is_primary: bool = False
+
+class ProductImageResponse(BaseModel):
+    sort_order: int

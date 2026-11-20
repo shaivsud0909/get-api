@@ -2,16 +2,20 @@
 
 from typing import Literal
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.database.connection import get_db
 from app.database.models import Product
-from app.products.schema import ProductCreate, ProductUpdate
-from app.products.create import create_products
-from app.products.get import get_all_products, search_product
-from app.products.update import update_fields
-from app.products.delete import delete_product
+from app.products.feature_service import add_feature, add_image, delete_feature, get_product_features, update_feature
+from app.products.schema import ProductCreate, ProductFeatures, ProductImage, ProductUpdate
+from app.products.service import (
+    create_products,
+    get_all_products,
+    search_product,
+    update_fields,
+    delete_product,
+)
 from app.utils.api_response import api_response
 
 
@@ -69,6 +73,55 @@ async def edit_product(product_id: int, request: ProductUpdate, db: Session = De
 async def remove_product(product_id: int, db: Session = Depends(get_db)):
     try:
         return await delete_product(product_id, db)
+    except HTTPException:
+        raise
+    except Exception:
+        raise
+
+
+@api_response(success_message="Product features fetched successfully", error_message="Failed to fetch product features")
+async def fetch_product_features(product_id: int, db: Session = Depends(get_db)):
+    try:
+        return await get_product_features(db=db, product_id=product_id)
+    except HTTPException:
+        raise
+    except Exception:
+        raise
+
+@api_response(success_message="Product features added successfully", error_message="Failed to add product features")
+async def add_product_features(product_id: int, request: ProductFeatures, db: Session = Depends(get_db)):
+    try:
+        return await add_feature(product_id=product_id, data=request, db=db)
+    except HTTPException:
+        raise
+    except Exception:
+        raise
+
+async def add_product_image(product_id: int, alt_text: str | None,is_primary: bool = False,sort_order: int = 0, image: UploadFile = File(...), db: Session = Depends(get_db)):
+    try:
+        request = ProductImage(alt_text=alt_text,is_primary=is_primary)
+
+        return await add_image(product_id=product_id,data=request,image=image,db=db)
+    except HTTPException:
+        raise
+    except Exception:
+        raise
+
+
+@api_response(success_message="Product features updated successfully", error_message="Failed to update product features")
+async def update_product_features(product_id: int, feature_id: int, request: ProductFeatures, db: Session = Depends(get_db)):
+    try:
+        return await update_feature(product_id=product_id, feature_id=feature_id, data=request, db=db)
+    except HTTPException:
+        raise
+    except Exception:
+        raise
+
+
+@api_response(success_message="Product features deleted successfully", error_message="Failed to delete product features")
+async def delete_product_features(product_id: int, feature_id: int, db: Session = Depends(get_db)):
+    try:
+       return await delete_feature(product_id=product_id, feature_id=feature_id, db=db)
     except HTTPException:
         raise
     except Exception:

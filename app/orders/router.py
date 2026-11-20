@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.authentication.role import user_required
@@ -9,8 +9,9 @@ from app.utils.api_response import api_response
 
 
 @api_response(success_message="Order created successfully", error_message="Failed to create order")
-async def checkout(request: CheckoutRequest, current_user: dict = Depends(user_required), db: AsyncSession = Depends(get_db)):
+async def checkout(request: CheckoutRequest, req: Request, _: dict = Depends(user_required), db: AsyncSession = Depends(get_db)):
     try:
+        current_user = req.state.user
         user_id = int(current_user["sub"])
         return await checkout_service(request.address_id, user_id, db)
     except HTTPException:
@@ -20,8 +21,9 @@ async def checkout(request: CheckoutRequest, current_user: dict = Depends(user_r
 
 
 @api_response(success_message="Orders fetched successfully", error_message="Failed to fetch orders")
-async def fetch_orders(current_user: dict = Depends(user_required), db: AsyncSession = Depends(get_db)):
+async def fetch_orders(req: Request, _: dict = Depends(user_required), db: AsyncSession = Depends(get_db)):
     try:
+        current_user = req.state.user
         user_id = int(current_user["sub"])
         return await get_orders_service(user_id, db)
     except HTTPException:
@@ -31,8 +33,9 @@ async def fetch_orders(current_user: dict = Depends(user_required), db: AsyncSes
 
 
 @api_response(success_message="Order fetched successfully", error_message="Failed to fetch order")
-async def fetch_order(order_id: int, current_user: dict = Depends(user_required), db: AsyncSession = Depends(get_db)):
+async def fetch_order(order_id: int, req: Request, _: dict = Depends(user_required), db: AsyncSession = Depends(get_db)):
     try:
+        current_user = req.state.user
         user_id = int(current_user["sub"])
         return await get_order_service(order_id, user_id, db)
     except HTTPException:

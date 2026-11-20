@@ -30,12 +30,12 @@ def api_response(
                 raise
 
             except Exception as e:
-                logger.exception("%s failed unexpectedly", func.__name__ , e)
+                logger.exception("%s failed unexpectedly", func.__name__)
 
                 raise HTTPException(
                     status_code=500,
                     detail={
-                        "error": e,
+                        "error": str(e),
                         "message": error_message,
                     },
                 )
