@@ -1,0 +1,56 @@
+version: v1
+application: get-api
+namespace: get-api
+services:
+  backend:
+    type: web
+    path: ""
+    port: 8000
+    # Private: no auto_domain / domain — reachable only inside the cluster (via the frontend's /api proxy).
+    scaling:
+      type: hpa
+      min_replicas: 1
+      max_replicas: 2
+      cpu: 70
+    resources:
+      cpu_request: "100m"
+      memory_request: "256Mi"
+      cpu_limit: "500m"
+      memory_limit: "512Mi"
+    build:
+      method: docker
+      dockerfile: ./Dockerfile
+      watch_paths:
+        - app
+        - core
+        - alembic
+        - alembic.ini
+        - requirements.txt
+    env:
+      DB_SCHEMA: "getapi"
+      ALGORITHM: "HS256"
+      ACCESS_TOKEN_EXPIRE_MINUTES: "30"
+    secrets:
+      SECRET_KEY: prakhratisecret
+    connections:
+      DATABASE_URL: postgres/rentlo-db
+  frontend:
+    type: web
+    path: frontend
+    port: 8080
+    auto_domain: true
+    scaling:
+      type: hpa
+      min_replicas: 1
+      max_replicas: 2
+      cpu: 70
+    resources:
+      cpu_request: "50m"
+      memory_request: "64Mi"
+      cpu_limit: "250m"
+      memory_limit: "128Mi"
+    build:
+      method: docker
+      dockerfile: ./Dockerfile
+    connections:
+      BACKEND_URL: service/get-api/backend

@@ -5,7 +5,7 @@ from core.config import settings
 from core.logs import logger
 
 
-engine = create_async_engine(settings.DATABASE_URL, echo=True)
+engine = create_async_engine(settings.DATABASE_URL, echo=settings.debug, connect_args=settings.DB_CONNECT_ARGS)
 
 AsyncSessionLocal = async_sessionmaker(bind=engine, autoflush=False, autocommit=False, expire_on_commit=False)
 
