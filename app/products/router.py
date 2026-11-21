@@ -97,9 +97,10 @@ async def add_product_features(product_id: int, request: ProductFeatures, db: Se
     except Exception:
         raise
 
-async def add_product_image(product_id: int, alt_text: str | None,is_primary: bool = False,sort_order: int = 0, image: UploadFile = File(...), db: Session = Depends(get_db)):
+@api_response(success_message="Product image added successfully", error_message="Failed to add product image")
+async def add_product_image(product_id: int, alt_text: str | None, is_primary: bool = False, sort_order: int = 0, image: UploadFile = File(...), db: Session = Depends(get_db)):
     try:
-        request = ProductImage(alt_text=alt_text,is_primary=is_primary)
+        request = ProductImage(alt_text=alt_text,is_primary=is_primary,sort_order=sort_order)
 
         return await add_image(product_id=product_id,data=request,image=image,db=db)
     except HTTPException:
