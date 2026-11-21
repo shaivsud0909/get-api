@@ -2,6 +2,7 @@
 
 Revision ID: a7d3c9e1f2b4
 Revises: 49c0ef330aa2
+Creates demo.admin@example.com (role admin) if it does not exist.
 """
 from typing import Sequence, Union
 
