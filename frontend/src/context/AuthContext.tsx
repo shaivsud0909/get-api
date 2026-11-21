@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import type { AuthUser } from '../types';
 import * as authService from '../services/authService';
 import { setUnauthorizedListener } from '../services/apiClient';
-import { userFromToken } from '../utils/jwt';
+import { decodeToken, userFromToken } from '../utils/jwt';
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -36,6 +36,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     return () => setUnauthorizedListener(null);
   }, [logout]);
+
+  // Tokens expire after ~30 min and there is no refresh endpoint: drop the
+  // session when the token's `exp` passes.
+  useEffect(() => {
+    if (!user) return;
+    const token = authService.getStoredToken();
+    const payload = token ? decodeToken(token) : null;
+    if (!payload) return;
+    const ms = payload.exp * 1000 - Date.now();
+    const timer = window.setTimeout(logout, Math.max(ms, 0));
+    return () => window.clearTimeout(timer);
+  }, [user, logout]);
 
   const login = useCallback(async (email: string, password: string): Promise<AuthUser> => {
     const { access_token } = await authService.login({ email, password });

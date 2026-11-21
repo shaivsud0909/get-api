@@ -7,6 +7,8 @@ import { ProductDetailPage } from './pages/ProductDetailPage';
 import { CartPage } from './pages/CartPage';
 import { LoginPage, SignupPage } from './pages/AuthPages';
 import { OrdersPage } from './pages/OrdersPage';
+import { CheckoutPage } from './pages/CheckoutPage';
+import { ProfilePage } from './pages/ProfilePage';
 import { InfoPage, NotFoundPage } from './pages/InfoPages';
 
 export default function App() {
@@ -38,11 +40,9 @@ export default function App() {
           }
         />
         <Route element={<ProtectedRoute />}>
+          <Route path="checkout" element={<CheckoutPage />} />
           <Route path="orders" element={<OrdersPage />} />
-          <Route
-            path="profile"
-            element={<InfoPage title="Your profile" body="Profile management is coming soon." />}
-          />
+          <Route path="profile" element={<ProfilePage />} />
         </Route>
         <Route path="*" element={<NotFoundPage />} />
       </Route>

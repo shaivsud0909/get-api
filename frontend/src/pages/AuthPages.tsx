@@ -14,7 +14,7 @@ const loginSchema = z.object({
 });
 
 const signupSchema = loginSchema.extend({
-  password: z.string().min(8, 'At least 8 characters'),
+  password: z.string().min(8, 'At least 8 characters').max(128, 'At most 128 characters'),
   phone_number: z.string().optional(),
   country_code: z.string().optional(),
 });
@@ -31,7 +31,7 @@ function Shell({ title, children }: { title: string; children: React.ReactNode }
 }
 
 export function LoginPage() {
-  const { login } = useAuth();
+  const { login, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [error, setError] = useState<string | null>(null);
@@ -45,7 +45,13 @@ export function LoginPage() {
   const onSubmit = handleSubmit(async (values) => {
     setError(null);
     try {
-      await login(values.email, values.password);
+      const signedIn = await login(values.email, values.password);
+      if (signedIn.role === 'admin') {
+        // Roles are exclusive: shop endpoints reject admin tokens with 403.
+        logout();
+        setError('This is an admin account. Admin accounts cannot use the shop — sign in with a customer account.');
+        return;
+      }
       navigate(from, { replace: true });
     } catch (err) {
       setError(getErrorMessage(err));

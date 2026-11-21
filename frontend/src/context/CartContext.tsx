@@ -12,7 +12,10 @@ import { CART_STORAGE_KEY } from '../constants';
  * are synced to the backend where endpoints exist:
  *   - add       → POST /add-to-cart (authenticated users)
  *   - quantity  → PATCH /cart-item/{id} (when the line has a server id)
- *   - remove    → local only (no DELETE endpoint on the backend)
+ *   - remove    → local only (no DELETE endpoint on the backend), so a
+ *                 removed line may still be in the server cart at checkout.
+ *                 The checkout page shows the server's order before payment.
+ * The server empties its cart after a confirmed payment; call clearCart then.
  */
 
 interface CartContextValue {
@@ -23,6 +26,8 @@ interface CartContextValue {
   updateQuantity: (productId: number, quantity: number) => Promise<void>;
   removeItem: (productId: number) => void;
   clearCart: () => void;
+  /** Push lines added while signed out to the server cart (needed before /checkout). */
+  syncUnsyncedLines: () => Promise<void>;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -60,6 +65,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const addItem = useCallback(
     async (product: Product, quantity: number) => {
+      if (!Number.isInteger(quantity) || quantity < 1) {
+        // The server doesn't validate this and returns 500 for 0 / negatives.
+        throw new Error('Quantity must be at least 1.');
+      }
       const existing = lines.find((l) => l.product.id === product.id);
       const nextQuantity = (existing?.quantity ?? 0) + quantity;
       if (nextQuantity > product.stock) {
@@ -119,6 +128,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const clearCart = useCallback(() => setLines([]), []);
 
+  const syncUnsyncedLines = useCallback(async () => {
+    if (!isAuthenticated || user?.role !== 'user') return;
+    const pending = lines.filter((l) => l.serverItemId === null);
+    for (const line of pending) {
+      try {
+        const item = await cartService.addToCart(line.product.id, line.quantity);
+        setLines((prev) =>
+          prev.map((l) => (l.product.id === line.product.id ? { ...l, serverItemId: item.id } : l))
+        );
+      } catch (error) {
+        throw new Error(`${line.product.name}: ${getErrorMessage(error)}`);
+      }
+    }
+  }, [lines, isAuthenticated, user]);
+
   const { itemCount, subtotal } = useMemo(
     () => ({
       itemCount: lines.reduce((sum, l) => sum + l.quantity, 0),
@@ -128,8 +152,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ lines, itemCount, subtotal, addItem, updateQuantity, removeItem, clearCart }),
-    [lines, itemCount, subtotal, addItem, updateQuantity, removeItem, clearCart]
+    () => ({
+      lines,
+      itemCount,
+      subtotal,
+      addItem,
+      updateQuantity,
+      removeItem,
+      clearCart,
+      syncUnsyncedLines,
+    }),
+    [lines, itemCount, subtotal, addItem, updateQuantity, removeItem, clearCart, syncUnsyncedLines]
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

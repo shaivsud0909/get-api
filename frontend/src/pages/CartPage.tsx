@@ -1,9 +1,8 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ShoppingBag, Trash2 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import { getErrorMessage } from '../services/apiClient';
-import { placeOrder } from '../services/orderService';
 import { EmptyState } from '../components/ui/EmptyState';
 import { QuantitySelector } from '../components/ui/QuantitySelector';
 import { formatPrice } from '../utils/format';
@@ -11,6 +10,7 @@ import { formatPrice } from '../utils/format';
 export function CartPage() {
   const { lines, subtotal, updateQuantity, removeItem } = useCart();
   const { showToast } = useToast();
+  const navigate = useNavigate();
 
   if (lines.length === 0) {
     return (
@@ -24,13 +24,7 @@ export function CartPage() {
     );
   }
 
-  const checkout = async () => {
-    try {
-      await placeOrder();
-    } catch (err) {
-      showToast(getErrorMessage(err), 'info');
-    }
-  };
+  const checkout = () => navigate('/checkout');
 
   return (
     <div className="container-px space-y-6 py-12">
