@@ -29,7 +29,6 @@ async def test_admin_routes_require_token(client, method, url, kwargs):
     "method, url, kwargs",
     [
         ("get", "/fetch-products", {}),
-        ("get", "/products/1", {}),
         ("post", "/add-products", {"json": {"name": "x", "price": 1.0}}),
         ("patch", "/products/1", {"json": {"price": 1.0}}),
         ("delete", "/products/1", {}),
@@ -40,17 +39,26 @@ async def test_admin_routes_reject_user(user_client, method, url, kwargs):
     assert response.status_code == 403
 
 
-# ── GET /products/{product_id} ──────────────────────────────────────────────
+# ── GET /product/{product_id} (shared: user + admin) ────────────────────────
 
 async def test_fetch_product_success(admin_client):
     product = await create_product(admin_client, name="Fetch Me")
-    response = await admin_client.get(f"/products/{product['id']}")
+    response = await admin_client.get(f"/product/{product['id']}")
     assert response.status_code == 200
+    assert response.json()["data"]["name"] == "Fetch Me"
 
 
 async def test_fetch_product_not_found(admin_client):
-    response = await admin_client.get("/products/999999")
+    response = await admin_client.get("/product/999999")
     assert response.status_code == 404
+
+
+@pytest.mark.parametrize("url", ["/product/{id}", "/products/{id}"])
+async def test_shared_product_routes_allow_both_roles(admin_client, user_client, url):
+    product = await create_product(admin_client)
+    path = url.format(id=product["id"])
+    assert (await admin_client.get(path)).status_code == 200
+    assert (await user_client.get(path)).status_code == 200
 
 
 # ── GET /fetch-products ──────────────────────────────────────────────────────
@@ -166,7 +174,7 @@ async def test_delete_product_success(admin_client):
     product = await create_product(admin_client, name="Delete Me")
     response = await admin_client.delete(f"/products/{product['id']}")
     assert response.status_code == 200
-    assert (await admin_client.get(f"/products/{product['id']}")).status_code == 404
+    assert (await admin_client.get(f"/product/{product['id']}")).status_code == 404
 
 
 async def test_delete_product_not_found(admin_client):

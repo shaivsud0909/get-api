@@ -35,11 +35,8 @@ async def test_review_routes_require_token(client, method, url, kwargs):
 @pytest.mark.parametrize(
     "method, url, kwargs",
     [
-        ("get", "/products/1/reviews", {}),
         ("post", "/products/1/reviews", {"json": {"rating": 5}}),
-        ("get", "/reviews/1", {}),
         ("put", "/reviews/1", {"json": {"rating": 4}}),
-        ("delete", "/reviews/1", {}),
     ],
 )
 async def test_review_routes_reject_admin(admin_client, method, url, kwargs):
@@ -185,6 +182,23 @@ async def test_delete_review_success(user_client, admin_client):
     review = (await add_review(user_client, product["id"])).json()["data"]
 
     response = await user_client.delete(f"/reviews/{review['id']}")
+    assert response.status_code == 200
+    assert (await user_client.get(f"/reviews/{review['id']}")).status_code == 404
+
+
+async def test_admin_can_read_reviews(user_client, admin_client):
+    product = await create_product(admin_client)
+    review = (await add_review(user_client, product["id"])).json()["data"]
+
+    assert (await admin_client.get(f"/products/{product['id']}/reviews")).status_code == 200
+    assert (await admin_client.get(f"/reviews/{review['id']}")).status_code == 200
+
+
+async def test_admin_can_delete_any_review(user_client, admin_client):
+    product = await create_product(admin_client)
+    review = (await add_review(user_client, product["id"])).json()["data"]
+
+    response = await admin_client.delete(f"/reviews/{review['id']}")
     assert response.status_code == 200
     assert (await user_client.get(f"/reviews/{review['id']}")).status_code == 404
 

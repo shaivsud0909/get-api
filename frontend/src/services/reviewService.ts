@@ -6,7 +6,7 @@ export interface ReviewInput {
   comment?: string;
 }
 
-/** GET /products/{id}/reviews */
+/** GET /products/{id}/reviews — shared: users and admins. */
 export async function fetchReviews(productId: number): Promise<Review[]> {
   const { data } = await apiClient.get<ApiEnvelope<Review[]>>(`/products/${productId}/reviews`);
   return data.data;
@@ -30,7 +30,10 @@ export async function updateReview(reviewId: number, input: Partial<ReviewInput>
   return data.data;
 }
 
-/** DELETE /reviews/{id} */
+/**
+ * DELETE /reviews/{id} — shared route. Users may delete only their own review;
+ * admins may delete any review.
+ */
 export async function deleteReview(reviewId: number): Promise<void> {
   await apiClient.delete(`/reviews/${reviewId}`);
 }

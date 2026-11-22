@@ -9,13 +9,12 @@ from app.addresses.service import (
     select_address_service,
     update_address_service,
 )
-from app.authentication.role import user_required
 from app.database.connection import get_db
 from app.utils.api_response import api_response
 
 
 @api_response(success_message="Address added successfully", error_message="Failed to add address")
-async def add_address(request: AddressCreate, req: Request, _: dict = Depends(user_required), db: AsyncSession = Depends(get_db)):
+async def add_address(request: AddressCreate, req: Request, db: AsyncSession = Depends(get_db)):
     try:
         current_user = req.state.user
         user_id = int(current_user["sub"])
@@ -27,7 +26,7 @@ async def add_address(request: AddressCreate, req: Request, _: dict = Depends(us
 
 
 @api_response(success_message="Addresses fetched successfully", error_message="Failed to fetch addresses")
-async def fetch_addresses(req: Request, _: dict = Depends(user_required), db: AsyncSession = Depends(get_db)):
+async def fetch_addresses(req: Request, db: AsyncSession = Depends(get_db)):
     try:
         current_user = req.state.user
         user_id = int(current_user["sub"])
@@ -39,7 +38,7 @@ async def fetch_addresses(req: Request, _: dict = Depends(user_required), db: As
 
 
 @api_response(success_message="Address updated successfully", error_message="Failed to update address")
-async def edit_address(address_id: int, request: AddressUpdate, req: Request, _: dict = Depends(user_required), db: AsyncSession = Depends(get_db)):
+async def edit_address(address_id: int, request: AddressUpdate, req: Request, db: AsyncSession = Depends(get_db)):
     try:
         current_user = req.state.user
         user_id = int(current_user["sub"])
@@ -51,7 +50,7 @@ async def edit_address(address_id: int, request: AddressUpdate, req: Request, _:
 
 
 @api_response(success_message="Address selected successfully", error_message="Failed to select address")
-async def select_address(address_id: int, req: Request, _: dict = Depends(user_required), db: AsyncSession = Depends(get_db)):
+async def select_address(address_id: int, req: Request, db: AsyncSession = Depends(get_db)):
     try:
         current_user = req.state.user
         user_id = int(current_user["sub"])
@@ -63,7 +62,7 @@ async def select_address(address_id: int, req: Request, _: dict = Depends(user_r
 
 
 @api_response(success_message="Address deleted successfully", error_message="Failed to delete address")
-async def remove_address(address_id: int, req: Request, _: dict = Depends(user_required), db: AsyncSession = Depends(get_db)):
+async def remove_address(address_id: int, req: Request, db: AsyncSession = Depends(get_db)):
     try:
         current_user = req.state.user
         user_id = int(current_user["sub"])

@@ -31,7 +31,7 @@ function Shell({ title, children }: { title: string; children: React.ReactNode }
 }
 
 export function LoginPage() {
-  const { login, logout } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [error, setError] = useState<string | null>(null);
@@ -46,13 +46,12 @@ export function LoginPage() {
     setError(null);
     try {
       const signedIn = await login(values.email, values.password);
-      if (signedIn.role === 'admin') {
-        // Roles are exclusive: shop endpoints reject admin tokens with 403.
-        logout();
-        setError('This is an admin account. Admin accounts cannot use the shop — sign in with a customer account.');
-        return;
-      }
-      navigate(from, { replace: true });
+      // Admins can browse products and moderate reviews, but cart, checkout,
+      // orders and addresses remain customer-only — send them to the shop.
+      const customerOnly = ['/cart', '/checkout', '/orders', '/profile'];
+      const target =
+        signedIn.role === 'admin' && customerOnly.some((p) => from.startsWith(p)) ? '/shop' : from;
+      navigate(target, { replace: true });
     } catch (err) {
       setError(getErrorMessage(err));
     }

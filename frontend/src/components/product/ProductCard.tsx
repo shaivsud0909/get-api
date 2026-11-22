@@ -7,6 +7,7 @@ import { productImage } from '../../utils/productImages';
 import { StockBadge } from '../ui/StockBadge';
 import { useCart } from '../../context/CartContext';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
 
 interface ProductCardProps {
   product: Product;
@@ -14,6 +15,8 @@ interface ProductCardProps {
 
 export function ProductCard({ product }: ProductCardProps) {
   const { addItem } = useCart();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const { showToast } = useToast();
   const [isAdding, setIsAdding] = useState(false);
   const outOfStock = product.stock <= 0;
@@ -67,6 +70,7 @@ export function ProductCard({ product }: ProductCardProps) {
         )}
         <div className="mt-auto flex items-center justify-between gap-2 pt-2">
           <span className="text-lg font-semibold text-forest-800">{formatPrice(product.price)}</span>
+          {!isAdmin && (
           <button
             onClick={handleAdd}
             disabled={outOfStock || isAdding}
@@ -80,6 +84,7 @@ export function ProductCard({ product }: ProductCardProps) {
             )}
             {outOfStock ? 'Sold out' : 'Add'}
           </button>
+          )}
         </div>
       </div>
     </article>

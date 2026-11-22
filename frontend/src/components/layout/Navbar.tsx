@@ -151,6 +151,7 @@ export function Navbar() {
             )}
           </div>
 
+          {user?.role !== 'admin' && (
           <Link
             to="/cart"
             className="relative rounded-lg p-2 text-forest-800 hover:bg-forest-100"
@@ -163,6 +164,7 @@ export function Navbar() {
               </span>
             )}
           </Link>
+          )}
         </div>
       </nav>
 

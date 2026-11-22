@@ -37,3 +37,20 @@ async def user_required(request: Request, token: str = Depends(oauth)):
         return payload
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+
+async def any_role_required(request: Request, token: str = Depends(oauth)):
+    """Allow any authenticated user or admin; exposes the payload on request.state.user."""
+    try:
+        payload = decode_access_token(token)
+
+        if not payload:
+            raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+        if payload.get("role") not in ("user", "admin"):
+            raise HTTPException(status_code=403, detail="Access denied")
+
+        request.state.user = payload
+        return payload
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")

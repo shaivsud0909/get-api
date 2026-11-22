@@ -14,8 +14,8 @@ interface UseProductsResult {
 }
 
 /**
- * Fetches products from GET /products. Note: the backend guards this route
- * with role "user", so visitors must sign in before the catalogue loads.
+ * Fetches the product listing (GET /products for users, GET /fetch-products
+ * for admins). Visitors must sign in before the catalogue loads.
  */
 export function useProducts(query: ProductQuery = {}): UseProductsResult {
   const { isAuthenticated, user } = useAuth();
@@ -28,7 +28,7 @@ export function useProducts(query: ProductQuery = {}): UseProductsResult {
   const { category, customisable, order_by, order } = query;
 
   useEffect(() => {
-    if (!isAuthenticated || user?.role !== 'user') {
+    if (!isAuthenticated || !user) {
       setProducts([]);
       setNeedsAuth(true);
       setError(null);
@@ -41,7 +41,7 @@ export function useProducts(query: ProductQuery = {}): UseProductsResult {
     setNeedsAuth(false);
     setError(null);
 
-    fetchProducts({ category, customisable, order_by, order })
+    fetchProducts({ category, customisable, order_by, order }, user.role)
       .then((data) => {
         if (!cancelled) setProducts(data);
       })
@@ -55,7 +55,7 @@ export function useProducts(query: ProductQuery = {}): UseProductsResult {
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, user?.role, category, customisable, order_by, order, reloadKey]);
+  }, [isAuthenticated, user, category, customisable, order_by, order, reloadKey]);
 
   const reload = useCallback(() => setReloadKey((k) => k + 1), []);
 

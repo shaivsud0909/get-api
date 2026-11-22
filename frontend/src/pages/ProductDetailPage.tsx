@@ -30,13 +30,13 @@ export function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1);
 
   useEffect(() => {
-    if (!isAuthenticated || user?.role !== 'user' || !Number.isFinite(productId)) {
+    if (!isAuthenticated || !Number.isFinite(productId)) {
       setLoading(false);
       return;
     }
     let cancelled = false;
     setLoading(true);
-    // A product page needs two calls: /product/{id} and /products/{id}.
+    // Shared routes (users and admins): /product/{id}, /products/{id} and reviews.
     Promise.all([
       fetchProductById(productId),
       fetchProductDetails(productId).catch(() => null),
@@ -59,9 +59,9 @@ export function ProductDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [productId, isAuthenticated, user?.role, showToast]);
+  }, [productId, isAuthenticated, showToast]);
 
-  if (!isAuthenticated || user?.role !== 'user') {
+  if (!isAuthenticated || !user) {
     return (
       <div className="container-px py-12">
         <AuthGateNotice />
@@ -94,6 +94,7 @@ export function ProductDetailPage() {
     }
   };
 
+  const isAdmin = user.role === 'admin';
   const features = details?.features ?? [];
   const avgRating = reviews.length
     ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length
@@ -124,7 +125,7 @@ export function ProductDetailPage() {
             <p className="text-sm text-clay-700">This product can be customised.</p>
           )}
           {product.description && <p className="text-forest-600">{product.description}</p>}
-          {product.stock > 0 ? (
+          {isAdmin ? null : product.stock > 0 ? (
             <div className="flex items-center gap-4">
               <QuantitySelector value={quantity} onChange={setQuantity} max={product.stock} />
               <button className="btn-primary px-6 py-2.5" onClick={handleAdd}>
@@ -159,6 +160,7 @@ export function ProductDetailPage() {
       <ReviewsSection
         productId={product.id}
         userId={user.id}
+        isAdmin={isAdmin}
         reviews={reviews}
         onChange={setReviews}
       />
@@ -182,35 +184,44 @@ function Stars({ value }: { value: number }) {
 function ReviewsSection({
   productId,
   userId,
+  isAdmin,
   reviews,
   onChange,
 }: {
   productId: number;
   userId: number;
+  isAdmin: boolean;
   reviews: Review[];
   onChange: (reviews: Review[]) => void;
 }) {
   const { showToast } = useToast();
-  const own = reviews.find((r) => r.user_id === userId) ?? null;
+  // Admins cannot write reviews, so "own" only applies to customers.
+  const own = isAdmin ? null : reviews.find((r) => r.user_id === userId) ?? null;
   const [editing, setEditing] = useState(false);
 
-  const handleDelete = useCallback(async () => {
-    if (!own || !window.confirm('Delete your review?')) return;
-    try {
-      await reviewService.deleteReview(own.id);
-      onChange(reviews.filter((r) => r.id !== own.id));
-      showToast('Review deleted', 'success');
-    } catch (err) {
-      showToast(getErrorMessage(err), 'error');
-    }
-  }, [own, reviews, onChange, showToast]);
+  // Users delete their own review; admins can delete any review (same endpoint).
+  const handleDelete = useCallback(
+    async (review: Review) => {
+      const mine = review.user_id === userId && !isAdmin;
+      if (!window.confirm(mine ? 'Delete your review?' : 'Delete this review?')) return;
+      try {
+        await reviewService.deleteReview(review.id);
+        onChange(reviews.filter((r) => r.id !== review.id));
+        if (mine) setEditing(false);
+        showToast('Review deleted', 'success');
+      } catch (err) {
+        showToast(getErrorMessage(err), 'error');
+      }
+    },
+    [userId, isAdmin, reviews, onChange, showToast]
+  );
 
   return (
     <section className="space-y-6">
       <h2 className="font-display text-2xl font-semibold text-forest-900">Reviews</h2>
 
       {/* One review per user per product: hide the form once the user has one. */}
-      {(!own || editing) && (
+      {!isAdmin && (!own || editing) && (
         <ReviewForm
           initial={editing ? own : null}
           onCancel={editing ? () => setEditing(false) : undefined}
@@ -239,18 +250,25 @@ function ReviewsSection({
                 <div className="flex items-center gap-2">
                   <Stars value={r.rating} />
                   <span className="text-xs text-forest-500">
-                    {r.user_id === userId ? 'You' : 'Verified customer'} · {formatDate(r.created_at)}
+                    {!isAdmin && r.user_id === userId ? 'You' : isAdmin ? `Customer #${r.user_id}` : 'Verified customer'} · {formatDate(r.created_at)}
                   </span>
                 </div>
-                {r.user_id === userId && !editing && (
-                  <div className="flex gap-2">
-                    <button onClick={() => setEditing(true)} aria-label="Edit your review">
-                      <Pencil className="h-4 w-4 text-forest-600" />
-                    </button>
-                    <button onClick={handleDelete} aria-label="Delete your review">
-                      <Trash2 className="h-4 w-4 text-red-500" />
-                    </button>
-                  </div>
+                {isAdmin ? (
+                  <button onClick={() => handleDelete(r)} aria-label="Delete this review">
+                    <Trash2 className="h-4 w-4 text-red-500" />
+                  </button>
+                ) : (
+                  r.user_id === userId &&
+                  !editing && (
+                    <div className="flex gap-2">
+                      <button onClick={() => setEditing(true)} aria-label="Edit your review">
+                        <Pencil className="h-4 w-4 text-forest-600" />
+                      </button>
+                      <button onClick={() => handleDelete(r)} aria-label="Delete your review">
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </button>
+                    </div>
+                  )
                 )}
               </div>
               {r.comment && <p className="mt-2 text-sm text-forest-700">{r.comment}</p>}

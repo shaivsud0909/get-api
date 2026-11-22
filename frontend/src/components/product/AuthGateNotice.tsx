@@ -3,8 +3,8 @@ import { Lock } from 'lucide-react';
 import { EmptyState } from '../ui/EmptyState';
 
 /**
- * The backend guards GET /products behind an authenticated "user" role,
- * so signed-out visitors (and admins) cannot browse the catalogue.
+ * The backend guards the catalogue behind authentication (customers or admins),
+ * so signed-out visitors cannot browse it.
  */
 export function AuthGateNotice() {
   const location = useLocation();
