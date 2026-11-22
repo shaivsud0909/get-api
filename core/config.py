@@ -1,4 +1,5 @@
 from pathlib import Path
+from urllib.parse import parse_qsl, quote_plus, urlencode, urlsplit, urlunsplit
 from fastapi.datastructures import URL
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -15,15 +16,29 @@ class Settings(BaseSettings):
 
     port: int = 8000
 
-    DB_HOST: str 
-    DB_PORT: int 
-    DB_USER: str 
-    DB_PASSWORD: str 
-    DB_NAME: str 
+    # Either a full connection URL (injected by Inframan as DATABASE_URL)...
+    database_url: str | None = None
+    # ...or the individual parts (local development / docker-compose).
+    DB_HOST: str | None = None
+    DB_PORT: int = 5432
+    DB_USER: str | None = None
+    DB_PASSWORD: str | None = None
+    DB_NAME: str | None = None
+    # Postgres schema the app's tables live in (isolates it on a shared database).
+    DB_SCHEMA: str = "public"
 
     @property
     def DATABASE_URL(self) -> str:
-        return f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+        if self.database_url:
+            parts = urlsplit(self.database_url)
+            # asyncpg does not understand libpq's sslmode & co.; drop them.
+            query = urlencode([(k, v) for k, v in parse_qsl(parts.query) if k not in {"sslmode", "sslrootcert", "sslcert", "sslkey"}])
+            return urlunsplit(("postgresql+asyncpg", parts.netloc, parts.path, query, parts.fragment))
+        return f"postgresql+asyncpg://{quote_plus(self.DB_USER)}:{quote_plus(self.DB_PASSWORD)}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+
+    @property
+    def DB_CONNECT_ARGS(self) -> dict:
+        return {"server_settings": {"search_path": self.DB_SCHEMA}}
 
 
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30

@@ -119,6 +119,7 @@ async def add_image(product_id: int, data: ProductImageSchema, file: UploadFile,
             image_url=file.filename,
             alt_text=data.alt_text,
             is_primary=data.is_primary,
+            sort_order=data.sort_order
         )
 
         db.add(image)

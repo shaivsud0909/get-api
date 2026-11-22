@@ -9,3 +9,6 @@ LOGS
 hash_files
 Dockerfile
 .dockerignore
+frontend
+docs
+tests
