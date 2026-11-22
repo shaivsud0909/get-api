@@ -1,3 +1,5 @@
+import enum
+
 from sqlalchemy import (
     Boolean,
     Column,
@@ -12,10 +14,32 @@ from sqlalchemy import (
     CheckConstraint,
     Index,
     JSON,
+    Enum,
 )
 from sqlalchemy.orm import relationship
 
 from app.database.connection import Base
+
+
+def _enum_values(enum_cls):
+    # store the lowercase values ("pending_payment"), not the member names
+    return [member.value for member in enum_cls]
+
+
+class OrderStatus(str, enum.Enum):
+    PENDING_PAYMENT = "pending_payment"
+    CONFIRMED = "confirmed"
+    SHIPPED = "shipped"
+    DELIVERED = "delivered"
+    CANCELLED = "cancelled"
+    REFUNDED = "refunded"
+
+
+class PaymentStatus(str, enum.Enum):
+    CREATED = "created"
+    PAID = "paid"
+    FAILED = "failed"
+    REFUNDED = "refunded"
 
 
 class User(Base):
@@ -153,7 +177,11 @@ class Order(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     total_amount = Column(Float, nullable=False)
     currency = Column(String(3), nullable=False, default="INR", server_default="INR")
-    status = Column(String(20), nullable=False, default="pending_payment")
+    status = Column(
+        Enum(OrderStatus, name="order_status", values_callable=_enum_values),
+        nullable=False,
+        default=OrderStatus.PENDING_PAYMENT,
+    )
     shipping_address = Column(JSON, nullable=False)
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
@@ -189,7 +217,11 @@ class Payment(Base):
     gateway_payment_id = Column(String(100), nullable=True)
     amount = Column(Integer, nullable=False)  # smallest currency unit (paise)
     currency = Column(String(3), nullable=False, default="INR")
-    status = Column(String(20), nullable=False, default="created")
+    status = Column(
+        Enum(PaymentStatus, name="payment_status", values_callable=_enum_values),
+        nullable=False,
+        default=PaymentStatus.CREATED,
+    )
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 

@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.addresses.service import _get_user_address
-from app.database.models import Cart, CartItem, Order, OrderItem, Product
+from app.database.models import Cart, CartItem, Order, OrderItem, OrderStatus, Product
 from core.config import settings
 
 
@@ -71,7 +71,7 @@ async def checkout_service(address_id: int, user_id: int, db: AsyncSession):
         user_id=user_id,
         total_amount=float(total.quantize(Decimal("0.01"))),
         currency=settings.PAYMENT_CURRENCY,
-        status="pending_payment",
+        status=OrderStatus.PENDING_PAYMENT,
         shipping_address={
             "full_name": address.full_name,
             "phone": address.phone,

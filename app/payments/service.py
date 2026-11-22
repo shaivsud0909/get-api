@@ -5,7 +5,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database.models import Cart, CartItem, Order, Payment, Product
+from app.database.models import Cart, CartItem, Order, OrderStatus, Payment, PaymentStatus, Product
 from app.payments.gateway import create_gateway_order, verify_webhook_signature
 from core.config import settings
 from core.logs import logger
@@ -24,7 +24,7 @@ async def initiate_payment_service(order_id: int, user_id: int, db: AsyncSession
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
 
-    if order.status != "pending_payment":
+    if order.status != OrderStatus.PENDING_PAYMENT:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Order is not awaiting payment")
 
     # amount always comes from the stored order, never from the client
@@ -34,7 +34,7 @@ async def initiate_payment_service(order_id: int, user_id: int, db: AsyncSession
     existing = await db.execute(
         select(Payment).where(
             Payment.order_id == order.id,
-            Payment.status == "created",
+            Payment.status == PaymentStatus.CREATED,
             Payment.amount == amount,
         )
     )
@@ -49,7 +49,7 @@ async def initiate_payment_service(order_id: int, user_id: int, db: AsyncSession
             gateway_order_id=gateway_order["id"],
             amount=amount,
             currency=order.currency,
-            status="created",
+            status=PaymentStatus.CREATED,
         )
         try:
             db.add(payment)
@@ -107,7 +107,7 @@ async def handle_webhook_service(body: bytes, signature: str | None, db: AsyncSe
         logger.warning("Webhook for unknown gateway order %s", gateway_order_id)
         return {"handled": False}
 
-    if payment.status == "paid":
+    if payment.status == PaymentStatus.PAID:
         return {"handled": True, "duplicate": True}
 
     try:
@@ -122,9 +122,9 @@ async def handle_webhook_service(body: bytes, signature: str | None, db: AsyncSe
             order = await db.scalar(select(Order).where(Order.id == payment.order_id).with_for_update())
             await db.refresh(order, ["items"])
 
-            payment.status = "paid"
+            payment.status = PaymentStatus.PAID
             payment.gateway_payment_id = entity.get("id")
-            order.status = "confirmed"
+            order.status = OrderStatus.CONFIRMED
             await _fulfil_order(order, db)
 
         await db.commit()
