@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingBag, Sparkles, Loader2 } from 'lucide-react';
 import type { Product } from '../../types';
-import { formatPrice } from '../../utils/format';
+import { PriceTag } from '../ui/PriceTag';
 import { productImage } from '../../utils/productImages';
 import { StockBadge } from '../ui/StockBadge';
 import { useCart } from '../../context/CartContext';
@@ -69,7 +69,7 @@ export function ProductCard({ product }: ProductCardProps) {
           <p className="line-clamp-2 text-sm text-forest-600">{product.description}</p>
         )}
         <div className="mt-auto flex items-center justify-between gap-2 pt-2">
-          <span className="text-lg font-semibold text-forest-800">{formatPrice(product.price)}</span>
+          <PriceTag price={product.price} originalPrice={product.original_price} />
           {!isAdmin && (
           <button
             onClick={handleAdd}

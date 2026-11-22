@@ -22,6 +22,7 @@ async def create_products(request: ProductCreate, db: AsyncSession):
     new_product = Product(
         name=request.name,
         price=request.price,
+        original_price=request.original_price,
         stock=request.stock,
         category=request.category,
         customisable=request.customisable,
@@ -79,6 +80,14 @@ async def update_fields(product_id: int, data: ProductUpdate, db: AsyncSession):
 
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields provided for update")
+
+    new_price = update_data.get("price", product.price)
+    new_original_price = update_data.get("original_price", product.original_price)
+    if new_original_price is not None and new_original_price < new_price:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="original_price must be greater than or equal to price",
+        )
 
     try:
         for field, value in update_data.items():

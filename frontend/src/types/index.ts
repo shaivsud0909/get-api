@@ -2,7 +2,10 @@
 export interface Product {
   id: number;
   name: string;
+  /** Actual selling price — what the customer pays. */
   price: number;
+  /** MRP shown struck through; null/absent when there is no discount. */
+  original_price?: number | null;
   stock: number;
   category: string;
   customisable: boolean;

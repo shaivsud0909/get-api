@@ -92,7 +92,8 @@ class Product(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
-    price = Column(Float, nullable=False)
+    price = Column(Float, nullable=False)  # actual selling price (what the customer pays)
+    original_price = Column(Float, nullable=True)  # MRP shown struck-through; null = no discount
     stock = Column(Integer, default=0)
     category = Column(String(50), nullable=False,default="Uncategorized",index=True,)
     customisable = Column(Boolean, nullable=False, default=False)

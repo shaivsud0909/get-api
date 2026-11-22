@@ -9,6 +9,12 @@ export function formatPrice(amount: number): string {
   return inrFormatter.format(amount);
 }
 
+/** Percentage off, or 0 when there is no real discount. */
+export function discountPercent(price: number, originalPrice?: number | null): number {
+  if (!originalPrice || originalPrice <= price) return 0;
+  return Math.round(((originalPrice - price) / originalPrice) * 100);
+}
+
 export function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-IN', {
     day: 'numeric',

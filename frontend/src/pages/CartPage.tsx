@@ -5,6 +5,7 @@ import { useToast } from '../context/ToastContext';
 import { getErrorMessage } from '../services/apiClient';
 import { EmptyState } from '../components/ui/EmptyState';
 import { QuantitySelector } from '../components/ui/QuantitySelector';
+import { PriceTag } from '../components/ui/PriceTag';
 import { formatPrice } from '../utils/format';
 
 export function CartPage() {
@@ -36,7 +37,7 @@ export function CartPage() {
               <Link to={`/products/${product.id}`} className="font-medium text-forest-900 hover:underline">
                 {product.name}
               </Link>
-              <p className="text-sm text-forest-600">{formatPrice(product.price)}</p>
+              <p><PriceTag price={product.price} originalPrice={product.original_price} size="sm" /></p>
             </div>
             <QuantitySelector
               size="sm"

@@ -13,7 +13,8 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { QuantitySelector } from '../components/ui/QuantitySelector';
 import { Spinner } from '../components/ui/Spinner';
 import { StockBadge } from '../components/ui/StockBadge';
-import { formatDate, formatPrice } from '../utils/format';
+import { PriceTag } from '../components/ui/PriceTag';
+import { formatDate } from '../utils/format';
 import { productImage } from '../utils/productImages';
 import type { Product, ProductDetails, Review } from '../types';
 
@@ -119,7 +120,7 @@ export function ProductDetailPage() {
               review{reviews.length === 1 ? '' : 's'}
             </p>
           )}
-          <p className="text-2xl text-forest-800">{formatPrice(product.price)}</p>
+          <PriceTag price={product.price} originalPrice={product.original_price} size="lg" />
           <StockBadge stock={product.stock} />
           {product.customisable && (
             <p className="text-sm text-clay-700">This product can be customised.</p>
