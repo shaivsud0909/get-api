@@ -27,6 +27,13 @@ class Settings(BaseSettings):
     # Postgres schema the app's tables live in (isolates it on a shared database).
     DB_SCHEMA: str = "public"
 
+    # Connection pool: kept deliberately small so the app holds as few
+    # connections as possible on the shared, small Postgres instance.
+    DB_POOL_SIZE: int = 1        # connections kept open per process
+    DB_MAX_OVERFLOW: int = 2     # extra connections opened only under load
+    DB_POOL_TIMEOUT: int = 30    # seconds to wait for a free connection
+    DB_POOL_RECYCLE: int = 1800  # seconds before a connection is replaced
+
     @property
     def DATABASE_URL(self) -> str:
         if self.database_url:
